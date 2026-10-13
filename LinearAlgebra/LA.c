@@ -17,7 +17,9 @@ typedef node* PtrToNode;
 typedef node* List;
 
 int gcd(int a,int b);
-
+int collid(List list,PtrToNode newnode);
+void insert(List list,PtrToNode lastnode,PtrToNode newnode);
+ration** matrix_input(int col,int row);
 ration det(ration** D,int n);//行列式函数
 PtrToNode find(List l,char s[6]);//寻找某个节点
 void matrixmultiply(ration** a,ration** b,ration** c,int a_row,int a_col,int b_row,int b_col);//矩阵乘法
@@ -219,15 +221,17 @@ int main()
             
             ration D=det(check->matrix,check->col);
 
-            ration** temp=(ration**)malloc(sizeof(ration*)*check->col);
+            ration** temp=(ration**)malloc(sizeof(ration*)*(check->col));
             for (int i=0;i<check->col;i++)
                 temp[i]=(ration*)malloc(sizeof(ration)*check->col);
 
+            ration** subtemp=(ration**)malloc(sizeof(ration*)*(check->col-1));
+            for (int i=0;i<check->col;i++)
+                subtemp[i]=(ration*)malloc(sizeof(ration)*(check->col-1));
             for (int i=0;i<check->col;i++)
             {
                 for (int j=0;j<check->col;j++)
                 {
-                    ration subtemp[check->col][check->col];
                     int k1=0,k2=0;
                     int s1=0,s2=0;
                     while (k1<check->col)
@@ -254,6 +258,10 @@ int main()
                     temp[j][i]=(i+j)%2==1?(multiply(result,neg)):result;
                 }
             }
+            for (int i=0;i<check->col;i++)
+                free(subtemp[i]);
+            free(subtemp);
+
             newnode->row=check->row;
             newnode->col=check->col;
             newnode->matrix=temp;
@@ -294,7 +302,7 @@ int main()
                 free(newnode->matrix);
             }
 
-            ration** temp=(ration*)malloc(sizeof(ration*)*Node->col);
+            ration** temp=(ration**)malloc(sizeof(ration*)*Node->col);
             for (int i=0;i<Node->row;i++)
                 temp[i]=(ration*)malloc(sizeof(ration)*Node->row);
 
@@ -380,7 +388,7 @@ int main()
 
             newnode->row=t1->row;
             newnode->col=t1->col;
-            ration** temp=(ration*)malloc(sizeof(ration)*newnode->row);
+            ration** temp=(ration**)malloc(sizeof(ration)*newnode->row);
             for (int i=0;i<newnode->row;i++)
                 temp[i]=(ration*)malloc(sizeof(newnode->col));
 
@@ -406,7 +414,6 @@ int main()
         }
         else if (s=='-')
         {
-            int flag=0;
             char s1[6],s2[6];
             printf("输入需要相减的矩阵:\n");
             scanf("%5s %5s",s1,s2);
@@ -460,7 +467,6 @@ int main()
         }
         else if (s=='w')
         {
-            int flag=0;
             char s[6];
             printf("输入需要计算的矩阵:\n");
             scanf("%5s",s);
@@ -504,7 +510,7 @@ int main()
                 }
             }
 
-            ration** temp=(ration*)malloc(sizeof(ration*)*newnode->row);
+            ration** temp=(ration**)malloc(sizeof(ration*)*newnode->row);
             for (int k=0;k<newnode->row;k++)
                 temp[k]=(ration*)malloc(sizeof(ration)*newnode->col);
 
@@ -687,73 +693,67 @@ ration** matrix_input(int col,int row)
 }
 ration det(ration** D,int n)
 {
-    if (n==1)
+    ration zero;
+    zero.up=0;
+    zero.down=1;
+
+    ration curr;
+    curr.up=1;
+    curr.down=1;
+
+    ration** E=(ration**)malloc(sizeof(ration*)*n);
+            for (int i=0;i<n;i++)
+                E[i]=(ration*)malloc(sizeof(ration)*n);
+
+    for (int i=0;i<n;i++)
+        for (int j=0;j<n;j++)
+            E[i][j]=D[i][j];
+
+    int num_swap=0;
+
+    for (int i=0;i<n;i++)
     {
-        normalize(&D[0][0]);
-        return D[0][0];
-    }
-    else
-    {
-        int i;
-        for (i=0;i<n && D[0][i].up==0;i++);
-        if (i==n)
+        int p=i;
+        while (p<n && E[p][i].up==0)
+            p++;
+
+        if (p==n)
         {
-            ration answer={0,1};
-            return answer;
+            for (int i=0;i<n;i++)
+                free(E[i]);
+            free(E);
+            return zero;
         }
-        else
+
+        if (p!=i)
         {
-            int p=i;
-            ration temp[max][max];
-            for (int j=0;j<n;j++)
+            for (int l=0;l<n;l++)
+                swap(&E[i][l],&E[p][l]);
+            num_swap=!num_swap;
+        }
+
+        for (int l=i+1;l<n;l++)
+        {
+            ration fc=divide(E[l][i],E[i][i]);
+            for (int d=i;d<n;d++)
             {
-                for (int k=0;k<n;k++)
-                {
-                    temp[j][k]=D[j][k];
-                    normalize(&temp[j][k]); 
-                }
+                E[l][d]=minus(E[l][d],multiply(E[i][d],fc));
             }
-            int row = 1;
-            while (row < n)
-            {
-                if (temp[row][p].up != 0) 
-                {
-                    ration div = divide(temp[row][p], temp[0][p]);
-                    normalize(&div);
-                    for (int col=0; col<n; col++) 
-                    {
-                        ration mul = multiply(temp[0][col], div);
-                        normalize(&mul);
-                        temp[row][col] = minus(temp[row][col], mul);
-                        normalize(&temp[row][col]);
-                    }
-                }
-                row++;
-            }
-            ration arr[max][max];
-            for (int s=1;s<n;s++)
-            {
-                for (int j=0;j<p;j++)
-                {
-                    normalize(&temp[s][j]);
-                    arr[s-1][j]=temp[s][j];
-                }
-                for (int j=p+1;j<n;j++)
-                {
-                    normalize(&temp[s][j]);
-                    arr[s-1][j-1]=temp[s][j];
-                }
-            }
-            if (p%2 !=0)
-            {
-                temp[0][p].up=-temp[0][p].up;
-            }
-            normalize(&temp[0][p]);
-            ration sub_det = det(arr, n-1);
-            normalize(&sub_det);
-            return multiply(sub_det, temp[0][p]);
         }
     }
+
+    for (int i=0;i<n;i++)
+        curr=multiply(curr,E[i][i]);
+
+    for (int i=0;i<n;i++)
+        free(E[i]);
+    free(E);
+
+    ration f;
+    f.down=1;
+    f.up=(num_swap)?-1:1;
+
+    return multiply(curr,f);
 }
 PtrToNode find(List l,char s[6])
 {
