@@ -9,6 +9,7 @@ typedef struct
 
 extern ration neg;
 
+int gcd(int a,int b);
 void swap(ration* A,ration* B);
 ration plus(ration a,ration b);//分数加法
 ration minus(ration a,ration b);//分数减法

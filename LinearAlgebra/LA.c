@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ration_comput.h"
-#define max 50
+#include "matrix_operat.h"
 
 typedef struct _node
 {
@@ -16,13 +16,11 @@ typedef struct _node
 typedef node* PtrToNode;
 typedef node* List;
 
-int gcd(int a,int b);
+
 int collid(List list,PtrToNode newnode);
 void insert(List list,PtrToNode lastnode,PtrToNode newnode);
-ration** matrix_input(int col,int row);
-ration det(ration** D,int n);//行列式函数
 PtrToNode find(List l,char s[6]);//寻找某个节点
-void matrixmultiply(ration** a,ration** b,ration** c,int a_row,int a_col,int b_row,int b_col);//矩阵乘法
+
 int main()
 {
     printf("输入指令\na表示添加矩阵\np表示打印现有矩阵\nd表示求矩阵行列式\nm表示计算矩阵乘法\nl表示打印所有矩阵\nr表示求矩阵的逆\nx表示删除矩阵\nt表示求矩阵的转置矩阵\n+表示求两个矩阵的加法\n-表示求两个矩阵的减法\n*表示求矩阵的数乘\nw表示求矩阵的几次幂\n");
@@ -664,97 +662,6 @@ void insert(List list,PtrToNode lastnode,PtrToNode newnode)
         lastnode=newnode;
     }
 }
-ration** matrix_input(int col,int row)
-{
-    ration** re=(ration**)malloc(sizeof(ration*)*row);
-    for (int i=0;i<row;i++)
-        re[i]=(ration*)malloc(sizeof(ration)*col);
-
-    for (int i=0;i<row;i++)
-    {
-        for (int j=0;j<col;j++)
-        {
-            ration a;
-            a=rationinput();
-            if (a.up==0 && a.down==0)
-            {
-                printf("输入出错!\n");
-                for (int i=0;i<row;i++)
-                    free(re[i]);
-                free(re);
-
-                return NULL;
-            }
-            re[i][j]=a;
-        }
-    }
-
-    return re;
-}
-ration det(ration** D,int n)
-{
-    ration zero;
-    zero.up=0;
-    zero.down=1;
-
-    ration curr;
-    curr.up=1;
-    curr.down=1;
-
-    ration** E=(ration**)malloc(sizeof(ration*)*n);
-            for (int i=0;i<n;i++)
-                E[i]=(ration*)malloc(sizeof(ration)*n);
-
-    for (int i=0;i<n;i++)
-        for (int j=0;j<n;j++)
-            E[i][j]=D[i][j];
-
-    int num_swap=0;
-
-    for (int i=0;i<n;i++)
-    {
-        int p=i;
-        while (p<n && E[p][i].up==0)
-            p++;
-
-        if (p==n)
-        {
-            for (int i=0;i<n;i++)
-                free(E[i]);
-            free(E);
-            return zero;
-        }
-
-        if (p!=i)
-        {
-            for (int l=0;l<n;l++)
-                swap(&E[i][l],&E[p][l]);
-            num_swap=!num_swap;
-        }
-
-        for (int l=i+1;l<n;l++)
-        {
-            ration fc=divide(E[l][i],E[i][i]);
-            for (int d=i;d<n;d++)
-            {
-                E[l][d]=minus(E[l][d],multiply(E[i][d],fc));
-            }
-        }
-    }
-
-    for (int i=0;i<n;i++)
-        curr=multiply(curr,E[i][i]);
-
-    for (int i=0;i<n;i++)
-        free(E[i]);
-    free(E);
-
-    ration f;
-    f.down=1;
-    f.up=(num_swap)?-1:1;
-
-    return multiply(curr,f);
-}
 PtrToNode find(List l,char s[6])
 {
     PtrToNode check=l->next;
@@ -763,20 +670,4 @@ PtrToNode find(List l,char s[6])
         check=check->next;
     }
     return check;
-}
-void matrixmultiply(ration** a,ration** b,ration** c,int a_row,int a_col,int b_row,int b_col)
-{
-    for (int i=0;i<a_row;i++)
-    {
-        for (int j=0;j<b_col;j++)
-        {
-            ration sum={0,1};
-            for (int k=0;k<a_col;k++)
-            {
-                sum=plus(sum,multiply(a[i][k],b[k][j]));
-                normalize(&sum);
-            }
-            c[i][j]=sum;
-        }
-    }
 }
