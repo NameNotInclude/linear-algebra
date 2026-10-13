@@ -2,35 +2,25 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ration_comput.h"
 #define max 50
-typedef struct
-{
-    int up;
-    int down;
-}ration;
-ration neg={-1,1};
+
 typedef struct _node
 {
     char name[6];
     int col;//列数
     int row;//行数
-    ration matrix[max][max];
+    ration** matrix;
     struct _node* next;
 }node;
 typedef node* PtrToNode;
 typedef node* List;
+
 int gcd(int a,int b);
-ration plus(ration a,ration b);//分数加法
-ration minus(ration a,ration b);//分数减法
-ration multiply(ration a,ration b);//分数乘法
-ration divide(ration a,ration b);//分数除法
-void normalize(ration *r);//约分函数
-ration det(ration D[max][max],int n);//行列式函数
-ration rationinput();//有理数输入
-void rationprint(ration x);//有理数输出
+
+ration det(ration** D,int n);//行列式函数
 PtrToNode find(List l,char s[6]);//寻找某个节点
-void matrixmultiply(ration a[max][max],ration b[max][max],ration c[max][max],
-    int a_row,int a_col,int b_row,int b_col);//矩阵乘法
+void matrixmultiply(ration** a,ration** b,ration** c,int a_row,int a_col,int b_row,int b_col);//矩阵乘法
 int main()
 {
     printf("输入指令\na表示添加矩阵\np表示打印现有矩阵\nd表示求矩阵行列式\nm表示计算矩阵乘法\nl表示打印所有矩阵\nr表示求矩阵的逆\nx表示删除矩阵\nt表示求矩阵的转置矩阵\n+表示求两个矩阵的加法\n-表示求两个矩阵的减法\n*表示求矩阵的数乘\nw表示求矩阵的几次幂\n");
@@ -44,68 +34,40 @@ int main()
         s=getchar();
         if (s=='a')
         {
-            int flag=0;
             PtrToNode newnode=(PtrToNode)malloc(sizeof(node));
             printf("为矩阵命名,不超过五个字符:\n");
             scanf("%5s",newnode->name);
-            if (find(list,newnode->name)!=NULL)
+
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%5s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("该名称已存在\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+            
             printf("输入矩阵的行数与列数,按照row x col的格式:\n");
             scanf("%dx%d",&newnode->row,&newnode->col);
             getchar();
             printf("输入%d个有理数(形如5、3/4),两个有理数之间用空格或换行隔开:\n",newnode->col*newnode->row);
-            for (int i=0;i<newnode->row;i++)
+
+            ration** re=matrix_input(newnode->col,newnode->row);
+
+            if (re==NULL) 
             {
-                for (int j=0;j<newnode->col;j++)
-                {
-                    ration a;
-                    a=rationinput();
-                    if (a.up==0 && a.down==0)
-                    {
-                        printf("输入出错!\n");
-                        free(newnode);
-                        goto end;
-                    }
-                    newnode->matrix[i][j]=a;
-                }
+                free(newnode);
+                continue;
             }
+            else newnode->matrix=re;
+            
             if (flag)
             {
                 printf("覆盖成功!\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+
+            insert(list,lastnode,newnode);
+            
             printf("创建完成!\n");
         }
         else if (s=='p')
@@ -152,7 +114,6 @@ int main()
         }
         else if (s=='m')
         {
-            int flag=0;
             char s1[6],s2[6];
             printf("输入需要计算乘法的两个矩阵名称,以及一个新的矩阵,用于储存结果:\n");
             scanf("%5s %5s",s1,s2);
@@ -163,6 +124,7 @@ int main()
             if (loc1==NULL || loc2==NULL)
             {
                 printf("矩阵不存在!\n");
+                free(newnode);
                 continue;
             }
             if (loc1->col!=loc2->row)
@@ -171,56 +133,33 @@ int main()
                 free(newnode);
                 continue;
             }
-            if (find(list,newnode->name)!=NULL)
+            
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("新名称不能和旧名称相同\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+
             newnode->row=loc1->row;
             newnode->col=loc2->col;
-            ration temp[max][max];
+
+            ration** temp=(ration**)malloc(sizeof(ration*)*newnode->col);
+            for (int i=0;i<newnode->col;i++)
+                temp[i]=(ration*)malloc(sizeof(ration)*newnode->col);
+
             matrixmultiply(loc1->matrix,loc2->matrix,temp,loc1->row,loc1->col,loc2->row,loc2->col);
-            for(int i=0;i<loc1->row;i++)
-            {
-                for (int j=0;j<loc2->col;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            newnode->matrix=temp;
+            
             if (flag)
             {
                 printf("覆盖成功\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='l')
@@ -245,7 +184,6 @@ int main()
         }
         else if (s=='r')
         {
-            int flag=0;
             char n[6];
             printf("输入需要逆转的矩阵:\n");
             scanf("%5s",n);
@@ -270,35 +208,26 @@ int main()
             printf("输入一个新的矩阵,用于存放逆矩阵:\n");
             scanf("%5s",newname);
             strcpy(newnode->name,newname);
-            if (find(list,newname)!=NULL)
+
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newname);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%5s",n);
-                    if (strcmp(n,newname)==0)
-                    {
-                        printf("新名称不能和旧名称相同\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+            
             ration D=det(check->matrix,check->col);
-            ration temp[max][max];
+
+            ration** temp=(ration**)malloc(sizeof(ration*)*check->col);
+            for (int i=0;i<check->col;i++)
+                temp[i]=(ration*)malloc(sizeof(ration)*check->col);
+
             for (int i=0;i<check->col;i++)
             {
                 for (int j=0;j<check->col;j++)
                 {
-                    ration subtemp[max][max];
+                    ration subtemp[check->col][check->col];
                     int k1=0,k2=0;
                     int s1=0,s2=0;
                     while (k1<check->col)
@@ -327,35 +256,19 @@ int main()
             }
             newnode->row=check->row;
             newnode->col=check->col;
-            for (int i=0;i<check->col;i++)
-            {
-                for (int j=0;j<check->col;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            newnode->matrix=temp;
+
             if (flag)
             {
                 printf("覆盖完成\n");
                 continue;
             }
             printf("创建完成!\n");
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
         }
         else if (s=='t')
         {
-            int flag=0;
             int new_col,new_row;
             printf("输入需要转置的矩阵名称:\n");
             char n[6];
@@ -371,31 +284,20 @@ int main()
             printf("输入一个新的矩阵,用于存放转置的矩阵:\n");
             scanf("%5s",newname);
             strcpy(newnode->name,newname);
-            if (find(list,newname)!=NULL)
+            
+            int flag=collid(list,newnode);
+
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newname);
-                    new_col=newnode->row;
-                    new_row=newnode->col;
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%5s",n);
-                    if (strcmp(n,newname)==0)
-                    {
-                        printf("新名称不能和旧名称相同\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
-            ration temp[max][max];
+
+            ration** temp=(ration*)malloc(sizeof(ration*)*Node->col);
+            for (int i=0;i<Node->row;i++)
+                temp[i]=(ration*)malloc(sizeof(ration)*Node->row);
+
             for (int i=0;i<Node->row;i++)
             {
                 for (int j=0;j<Node->col;j++)
@@ -403,13 +305,8 @@ int main()
                     temp[j][i]=Node->matrix[i][j];
                 }
             }
-            for (int i=0;i<Node->col;i++)
-            {
-                for (int j=0;j<Node->row;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            newnode->matrix=temp;
+
             if (flag)
             {
                 newnode->row=new_row;
@@ -417,20 +314,12 @@ int main()
                 printf("覆盖完成\n");
                 continue;
             }
+
             newnode->row=Node->col;
             newnode->col=Node->row;
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            } 
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='x')
@@ -454,13 +343,15 @@ int main()
                 lastnode=check;
             }
             check->next=Node->next;
+            for (int i=0;i<Node->row;i++)
+                free(Node->matrix[i]);
+            free(Node->matrix);
             free(Node);
             printf("已删除矩阵%s\n",n);
             
         }
         else if (s=='+')
         {
-            int flag=0;
             char s1[6],s2[6];
             printf("输入需要相加的矩阵:\n");
             scanf("%5s %5s",s1,s2);
@@ -478,31 +369,21 @@ int main()
             printf("输入新的矩阵名称:\n");
             PtrToNode newnode=(PtrToNode)malloc(sizeof(node));
             scanf("%5s",newnode->name);
-            if (find(list,newnode->name)!=NULL)
+
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("该名称已存在\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+
             newnode->row=t1->row;
             newnode->col=t1->col;
-            ration temp[max][max];
+            ration** temp=(ration*)malloc(sizeof(ration)*newnode->row);
+            for (int i=0;i<newnode->row;i++)
+                temp[i]=(ration*)malloc(sizeof(newnode->col));
+
             for (int i=0;i<t1->row;i++)
             {
                 for (int j=0;j<t2->col;j++)
@@ -510,30 +391,17 @@ int main()
                     temp[i][j]=plus(t1->matrix[i][j],t2->matrix[i][j]);
                 }
             }
-            for (int i=0;i<t1->row;i++)
-            {
-                for (int j=0;j<t2->col;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            
+            newnode->matrix=temp;
+
             if (flag)
             {
                 printf("覆盖成功\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='-')
@@ -556,31 +424,21 @@ int main()
             printf("输入新的矩阵名称:\n");
             PtrToNode newnode=(PtrToNode)malloc(sizeof(node));
             scanf("%5s",newnode->name);
-            if (find(list,newnode->name)!=NULL)
+            
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("该名称已存在\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+
             newnode->row=t1->row;
             newnode->col=t1->col;
-            ration temp[max][max];
+            ration** temp=(ration**)malloc(sizeof(ration*)*newnode->row);
+            for (int i=0;i<newnode->col;i++)
+                temp[i]=(ration*)malloc(sizeof(ration)*newnode->col);
+
             for (int i=0;i<t1->row;i++)
             {
                 for (int j=0;j<t2->col;j++)
@@ -588,30 +446,16 @@ int main()
                     temp[i][j]=minus(t1->matrix[i][j],t2->matrix[i][j]);
                 }
             }
-            for (int i=0;i<t1->row;i++)
-            {
-                for (int j=0;j<t2->col;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            newnode->matrix=temp;
+
             if (flag)
             {
                 printf("覆盖成功\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='w')
@@ -636,31 +480,21 @@ int main()
             printf("输入新的矩阵名称:\n");
             PtrToNode newnode=(PtrToNode)malloc(sizeof(node));
             scanf("%5s",newnode->name);
-            if (find(list,newnode->name)!=NULL)
+            
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("该名称已存在\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+
             newnode->row=t->row;
             newnode->col=t->col;
-            ration E[max][max];
+            ration** E=(ration**)malloc(sizeof(ration*)*newnode->row);
+            for (int i=0;i<newnode->row;i++)
+                E[i]=(ration*)malloc(sizeof(ration)*newnode->col);
+
             for (int i=0;i<newnode->row;i++)
             {
                 for (int j=0;j<newnode->col;j++)
@@ -669,47 +503,38 @@ int main()
                     E[i][j].up=(i==j)?1:0;
                 }
             }
+
+            ration** temp=(ration*)malloc(sizeof(ration*)*newnode->row);
+            for (int k=0;k<newnode->row;k++)
+                temp[k]=(ration*)malloc(sizeof(ration)*newnode->col);
+
             for (int i=0;i<x;i++)
-            {
-                ration temp[max][max];
+            {             
                 matrixmultiply(E,t->matrix,temp,newnode->row,newnode->row,newnode->row,newnode->row);
-                for (int j=0;j<newnode->row;j++)
-                {
-                    for (int k=0;k<newnode->col;k++)
-                    {
-                        E[j][k]=temp[j][k];
-                    }
-                }
+                
+                ration** t=E;
+                E=temp;
+                temp=t;
             }
-            for (int i=0;i<newnode->col;i++)
-            {
-                for (int j=0;j<newnode->col;j++)
-                {
-                    newnode->matrix[i][j]=E[i][j];
-                }
-            }
+
+            for (int i=0;i<newnode->row;i++)
+                free(temp[i]);
+            free(temp);
+            
+            newnode->matrix=E;
+
             if (flag)
             {
                 printf("覆盖成功\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='*')
         {
-            int flag=0;
             char s[6];
             printf("输入需要数乘的矩阵:\n");
             scanf("%5s",s);
@@ -731,31 +556,21 @@ int main()
             printf("输入新的矩阵名称:\n");
             PtrToNode newnode=(PtrToNode)malloc(sizeof(node));
             scanf("%5s",newnode->name);
-            if (find(list,newnode->name)!=NULL)
+            
+            int flag=collid(list,newnode);
+            if (flag)
             {
-                printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
-                scanf("%d",&flag);
-                if (flag)
-                {
-                    newnode=find(list,newnode->name);
-                }
-                else while (1)
-                {
-                    printf("输入新名称:\n");
-                    char n[6];
-                    scanf("%s",n);
-                    if (find(list,n)!=NULL)
-                    {
-                        printf("该名称已存在\n");
-                        continue;
-                    }
-                    strcpy(newnode->name,n);
-                    break;
-                }
+                for (int i=0;i<newnode->row;i++)
+                    free(newnode->matrix[i]);
+                free(newnode->matrix);
             }
+            
             newnode->row=t->row;
             newnode->col=t->col;
-            ration temp[max][max];
+            ration** temp=(ration**)malloc(sizeof(ration*)*newnode->row);
+            for (int i=0;i<newnode->row;i++)
+                temp[i]=(ration*)malloc(sizeof(ration)*newnode->col);
+
             for (int i=0;i<t->row;i++)
             {
                 for (int j=0;j<t->col;j++)
@@ -763,30 +578,17 @@ int main()
                     temp[i][j]=multiply(t->matrix[i][j],x);
                 }
             }
-            for (int i=0;i<t->row;i++)
-            {
-                for (int j=0;j<t->col;j++)
-                {
-                    newnode->matrix[i][j]=temp[i][j];
-                }
-            }
+            
+            newnode->matrix=temp;
+
             if (flag)
             {
                 printf("覆盖成功\n");
                 continue;
             }
-            if (list->next==NULL)
-            {
-                list->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
-            else
-            {
-                lastnode->next=newnode;
-                newnode->next=NULL;
-                lastnode=newnode;
-            }
+            
+            insert(list,lastnode,newnode);
+
             printf("创建完成!\n");
         }
         else if (s=='0')
@@ -796,6 +598,9 @@ int main()
             while (check)
             {
                 PtrToNode tmp=check->next;
+                for (int i=0;i<check->row;i++)
+                    free(check->matrix[i]);
+                free(check->matrix);
                 free(check);
                 check=tmp; 
             }
@@ -808,77 +613,79 @@ int main()
     }
     return 0;
 }
-int gcd(int a,int b)
+
+int collid(List list,PtrToNode newnode)
 {
-    a=abs(a);
-    b=abs(b);
-    while (a!=0)
+    if (find(list,newnode->name)!=NULL)
     {
-        int temp=a;
-        a=b%a;
-        b=temp;
+        int flag;
+        printf("此名称已存在,是否覆盖?覆盖请输入1,否则输入0:\n");
+        scanf("%d",&flag);
+        if (flag)
+        {
+            free(newnode);
+            newnode=find(list,newnode->name);
+            return 1;
+        }
+        else while (1)
+        {
+            printf("输入新名称:\n");
+            char n[6];
+            scanf("%5s",n);
+            if (find(list,n)!=NULL)
+            {
+                printf("该名称已存在\n");
+                continue;
+            }
+            strcpy(newnode->name,n);
+            break;
+        }
     }
-    return b;
+    return 0;
 }
-ration plus (ration a,ration b)
+void insert(List list,PtrToNode lastnode,PtrToNode newnode)
 {
-    ration m;
-    m.down=(a.down/gcd(a.down,b.down))*b.down;
-    m.up=a.up*m.down/a.down+b.up*m.down/b.down;
-    int d=gcd(m.up,m.down);
-    m.up/=d;
-    m.down/=d;
-    if (m.up==0)
-        m.down=1;
-    return m;
-}
-ration minus(ration a,ration b)
-{
-    ration m;
-    m.down=(a.down/gcd(a.down,b.down))*b.down;
-    m.up=a.up*m.down/a.down-b.up*m.down/b.down;
-    int d=gcd(m.up,m.down);
-    m.up/=d;
-    m.down/=d;
-    if (m.up==0)
-        m.down=1;
-    return m;
-}
-ration multiply(ration a,ration b)
-{
-    ration m;
-    m.up=a.up*b.up;
-    m.down=a.down*b.down;
-    int d=gcd(m.up,m.down);
-    m.up/=d;
-    m.down/=d;
-    if (m.up==0)
-        m.down=1;
-    return m;
-}
-ration divide(ration a,ration b)
-{
-    ration m;
-    m.up=a.up*b.down;
-    m.down=a.down*b.up;
-    int d=gcd(m.up,m.down);
-    m.up/=d;
-    m.down/=d;
-    if (m.up==0)
-        m.down=1;
-    return m;
-}
-void normalize(ration *r) 
-{
-    int d = gcd(r->up, r->down);
-    r->up /= d;
-    r->down /= d;
-    if (r->up == 0)
+    if (list->next==NULL)
     {
-        r->down = 1;
+        list->next=newnode;
+        newnode->next=NULL;
+        lastnode=newnode;
+    }
+    else
+    {
+        lastnode->next=newnode;
+        newnode->next=NULL;
+        lastnode=newnode;
     }
 }
-ration det(ration D[max][max],int n)
+ration** matrix_input(int col,int row)
+{
+    ration** re=(ration**)malloc(sizeof(ration*)*row);
+    for (int i=0;i<row;i++)
+        re[i]=(ration*)malloc(sizeof(ration)*col);
+
+    for (int i=0;i<row;i++)
+    {
+        for (int j=0;j<col;j++)
+        {
+            ration a;
+            a=rationinput();
+            if (a.up==0 && a.down==0)
+            {
+                printf("输入出错!\n");
+                for (int i=0;i<row;i++)
+                    free(re[i]);
+                free(re);
+
+                return NULL;
+            }
+            re[i][j]=a;
+        }
+    }
+
+    return re;
+}
+ration det(ration** D,int n)
 {
     if (n==1)
     {
@@ -948,134 +755,6 @@ ration det(ration D[max][max],int n)
         }
     }
 }
-ration rationinput()
-{
-    ration null={0,0};
-    ration x;
-    int positive=1;
-    int first=1;
-    x.up=0,x.down=1;
-    while (1)
-    {
-        char c=getchar();
-       //判断符号
-        if (c=='-' && first)
-        {
-            positive=0;
-            first=0;
-        }
-        else if (c=='-' && !first)
-        {
-            printf("Input error");
-            return null;
-        }
-        //输入数字字符，存储到分子
-        else if (c>='0' && c<='9')
-        {
-            if (positive)
-            {
-            x.up=x.up*10+(c-'0');
-            }
-            else
-            {
-                x.up=x.up*10-(c-'0');
-            }
-        }
-        //输入分数线，开始处理分母
-        else if (c=='/')
-        {
-            x.down=0;
-            int positive1=1;
-            int first1=1;
-            while(1)
-            {
-                char d=getchar();
-                //输入数字字符，储存到分母
-                if (d=='-' &&  first1)
-                {
-                    positive1=0;
-                    first1=0;
-                }
-                else if (d=='-' && !first1)
-                {
-                    printf("Input error");
-                    return null;
-                }
-                else if (d>='0' && d<='9')
-                {
-                    if (positive1)
-                    {
-                        x.down=x.down*10+(d-'0');
-                    }
-                    else
-                    {
-                        x.down=x.down*10-(d-'0');
-                    }
-                }
-                else if (d==' ' || d=='\n')
-                {
-                    if (x.down==0)
-                    {
-                        printf("Divide 0 error");
-                        return null;
-                    }
-                    goto end;
-                }
-                else
-                {
-                    printf("Input error");
-                    return null;
-                }
-            }
-        }
-         //输入' '或'\n'，表示转换到下一数字
-        else if (c==' ' || c=='\n')
-        {
-            end:
-            break;
-        }
-        else
-        {
-            printf("Input error");
-            return null;
-        }
-    }
-    if (x.up<0 && x.down<0)
-    {
-        x.up=-x.up;
-        x.down=-x.down;
-    }
-    normalize(&x);
-    return x;
-}
-void rationprint(ration x)
-{
-    if (x.up<0 && x.down<0)
-    {
-        printf("%d/%d",-x.up,-x.down);
-        return;
-    }
-    if (x.down<0 && x.up>0)
-    {
-        printf("%d/%d",-x.up,-x.down);
-        return;
-    }
-    if (x.up==0)
-    {
-        printf("0");
-        return;
-    }
-    if (x.down==1)
-    {
-        printf("%d",x.up);
-        return;
-    }
-    if (x.down==-1)
-    {
-        printf("%d",-x.up);
-    }
-    printf("%d/%d",x.up,x.down);
-}
 PtrToNode find(List l,char s[6])
 {
     PtrToNode check=l->next;
@@ -1085,7 +764,7 @@ PtrToNode find(List l,char s[6])
     }
     return check;
 }
-void matrixmultiply(ration a[max][max],ration b[max][max],ration c[max][max],int a_row,int a_col,int b_row,int b_col)
+void matrixmultiply(ration** a,ration** b,ration** c,int a_row,int a_col,int b_row,int b_col)
 {
     for (int i=0;i<a_row;i++)
     {
