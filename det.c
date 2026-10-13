@@ -48,7 +48,7 @@ double det(double a[][max],int N)
                     arr[i-1][j-1]=temp[i][j];
                 }
             }
-            return a[0][p]*pow(-1,p)*det(arr,N-1);
+            return a[0][p]*((p%2)?-1:1)*det(arr,N-1);
         }
     }
 }
