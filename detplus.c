@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #define max 100
 typedef struct rational
@@ -18,7 +19,7 @@ int main()
     printf("行列式计算器，请输入一个正整数\n");
     int n;
     scanf("%d",&n);
-   printf("请输入%d个整数或分数(形如a/b)，两个数字之间使用空格或者换行隔开\n",n*n);
+    printf("请输入%d个整数或分数(形如a/b)，两个数字之间使用空格或者换行隔开\n",n*n);
     getchar();
     ration D[max][max];
     for (int i=0;i<n;i++)
