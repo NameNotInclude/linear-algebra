@@ -1,5 +1,6 @@
 #include "ration_comput.h"
 #include "matrix_operat.h"
+#include "AVL.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -109,4 +110,18 @@ ration det(ration** D,int n)
     f.up=(num_swap)?-1:1;
 
     return multiply(curr,f);
+}
+
+void matrix_print(PtrToNode AVL)
+{
+    printf("%s\n",AVL->name);
+    for (int i=0;i<AVL->row;i++)
+    {
+        for (int j=0;j<AVL->col;j++)
+        {
+            rationprint(AVL->matrix[i][j]);
+            printf(" ");
+        }
+        printf("\n");
+    }
 }
