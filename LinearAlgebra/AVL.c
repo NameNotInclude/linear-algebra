@@ -52,9 +52,11 @@ PtrToNode insert(PtrToNode AVL,PtrToNode new)
         return new;
     }
 
-    if (strcmp(new->name,AVL->name)==-1)
+    int cmp = strcmp(new->name, AVL->name);
+
+    if (cmp < 0)
         AVL->left = insert(AVL->left, new);
-    else if (strcmp(new->name,AVL->name)==1)
+    else if (cmp > 0)
         AVL->right = insert(AVL->right, new);
     else
         return AVL;
@@ -101,10 +103,12 @@ PtrToNode deleteNode(PtrToNode AVL,char* name)
     if (AVL == NULL)
         return NULL;
 
-    if (strcmp(AVL->name,name)==-1)
-        AVL->left = deleteNode(AVL->left, name);
-    else if (strcmp(AVL->name,name)==1)
+    int cmp = strcmp(AVL->name, name);
+
+    if (cmp < 0)
         AVL->right = deleteNode(AVL->right, name);
+    else if (cmp > 0)
+        AVL->left = deleteNode(AVL->left, name);
     else
     {
         if (AVL->left == NULL || AVL->right == NULL)
@@ -164,13 +168,13 @@ PtrToNode find(PtrToNode AVL, char* name)
     if (AVL==NULL)
         return NULL;
 
-    if (strcmp(AVL->name,name)==0)
+    int cmp = strcmp(AVL->name, name);
+
+    if (cmp == 0)
         return AVL;
-
-    else if (strcmp(AVL->name,name)==1)
+    else if (cmp > 0)
         return find(AVL->left,name);
-
-    else 
+    else
         return find(AVL->right,name);
     
 }

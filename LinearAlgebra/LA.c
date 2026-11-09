@@ -102,6 +102,7 @@ int main()
         }
         else if (s=='m')
         {
+
             char s1[6],s2[6];
             printf("输入需要计算乘法的两个矩阵名称,以及一个新的矩阵,用于储存结果:\n");
             scanf("%5s %5s",s1,s2);
@@ -531,6 +532,7 @@ int main()
         {
             continue;
         }
+        
     }
     return 0;
 }

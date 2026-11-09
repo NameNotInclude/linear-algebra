@@ -111,7 +111,6 @@ ration det(ration** D,int n)
 
     return multiply(curr,f);
 }
-
 void matrix_print(PtrToNode AVL)
 {
     printf("%s\n",AVL->name);
